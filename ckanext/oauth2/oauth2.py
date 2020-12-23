@@ -59,7 +59,9 @@ class OAuth2Helper(object):
 
     def __init__(self):
 
-        self.verify_https = os.environ.get('OAUTHLIB_INSECURE_TRANSPORT', '') == ""
+        # self.verify_https = os.environ.get('OAUTHLIB_INSECURE_TRANSPORT', '') == ""
+        self.verify_https = False
+        os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
         if self.verify_https and os.environ.get("REQUESTS_CA_BUNDLE", "").strip() != "":
             self.verify_https = os.environ["REQUESTS_CA_BUNDLE"].strip()
 
@@ -119,22 +121,24 @@ class OAuth2Helper(object):
                                       headers=headers,
                                       client_secret=self.client_secret,
                                       authorization_response=toolkit.request.url,
-                                      verify=self.verify_https)
+                                      )
         except requests.exceptions.SSLError as e:
             # TODO search a better way to detect invalid certificates
             if "verify failed" in six.text_type(e):
-                raise InsecureTransportError()
+                log.info('hey you\'re insecure lol')
+                # raise InsecureTransportError()
             else:
                 raise
-
+        log.info('get_token.token: %s' % token)
         return token
 
     def identify(self, token):
 
         if self.jwt_enable:
 
-            access_token = bytes(token['access_token'])
+            access_token = bytes(token['id_token'])
             user_data = jwt.decode(access_token, verify=False)
+            log.info('identify.user_data: %s' % user_data)
             user = self.user_json(user_data)
         else:
 
@@ -143,12 +147,13 @@ class OAuth2Helper(object):
                     profile_response = requests.get(self.profile_api_url + '?access_token=%s' % token['access_token'], verify=self.verify_https)
                 else:
                     oauth = OAuth2Session(self.client_id, token=token)
-                    profile_response = oauth.get(self.profile_api_url, verify=self.verify_https)
+                    profile_response = oauth.get(self.profile_api_url)
 
             except requests.exceptions.SSLError as e:
                 # TODO search a better way to detect invalid certificates
                 if "verify failed" in six.text_type(e):
-                    raise InsecureTransportError()
+                    log.info('hey you\'re insecure lol')
+                    # raise InsecureTransportError()
                 else:
                     raise
 
@@ -167,6 +172,8 @@ class OAuth2Helper(object):
         model.Session.add(user)
         model.Session.commit()
         model.Session.remove()
+
+        log.info('user: %s' % user.name)
 
         return user.name
 
@@ -259,11 +266,12 @@ class OAuth2Helper(object):
         if token:
             client = OAuth2Session(self.client_id, token=token, scope=self.scope)
             try:
-                token = client.refresh_token(self.token_endpoint, client_secret=self.client_secret, client_id=self.client_id, verify=self.verify_https)
+                token = client.refresh_token(self.token_endpoint, client_secret=self.client_secret, client_id=self.client_id)
             except requests.exceptions.SSLError as e:
                 # TODO search a better way to detect invalid certificates
                 if "verify failed" in six.text_type(e):
-                    raise InsecureTransportError()
+                    log.info('hey you\'re insecure lol')
+                    # raise InsecureTransportError()
                 else:
                     raise
             self.update_token(user_name, token)

@@ -102,6 +102,8 @@ class OAuth2Plugin(plugins.SingletonPlugin):
         m.connect('/user/login',
                   controller='ckanext.oauth2.controller:OAuth2Controller',
                   action='login')
+        
+        m.connect('/_logout', controller='ckanext.oauth2.controller:OAuth2Controller', action='logout')
 
         # We need to handle petitions received to the Callback URL
         # since some error can arise and we need to process them

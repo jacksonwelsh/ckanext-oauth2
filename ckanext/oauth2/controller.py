@@ -53,15 +53,22 @@ class OAuth2Controller(base.BaseController):
 
         self.oauth2helper.challenge(came_from_url)
 
+    def logout(self):
+        log.debug('logout')
+        return toolkit.redirect_to('https://dev-bxjc7w0s.us.auth0.com/v2/logout?client_id=%s&returnTo=http://localhost:5000/' % self.oauth2helper.client_id)
+
     def callback(self):
+        log.debug('CALLBACK NOW')
         try:
             token = self.oauth2helper.get_token()
             user_name = self.oauth2helper.identify(token)
             self.oauth2helper.remember(user_name)
             self.oauth2helper.update_token(user_name, token)
             self.oauth2helper.redirect_from_callback()
+            log.debug(token)
+            log.debug(user_name)
         except Exception as e:
-
+            log.error(e)
             session.save()
 
             # If the callback is called with an error, we must show the message
